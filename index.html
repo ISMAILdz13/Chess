@@ -389,13 +389,13 @@
     </div>
 
     <div id="app">
-        <div id="board-container">
-            <div id="eval-bar">
+        <div id="board-container" aria-label="Chess Board Container">
+            <div id="eval-bar" role="progressbar" aria-label="Evaluation Bar" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
                 <div id="eval-progress"></div>
             </div>
             <div class="board-wrapper" id="board-wrapper">
-                <div class="chessboard" id="board-grid"></div>
-                <div id="pieces-layer"></div>
+                <div class="chessboard" id="board-grid" role="grid" aria-label="Chess Board"></div>
+                <div id="pieces-layer" aria-hidden="true"></div>
             </div>
         </div>
 
@@ -426,19 +426,20 @@
             </div>
 
             <div class="controls">
-                <button class="btn btn-primary" id="reset-btn">New Game</button>
-                <button class="btn" id="ai-toggle-btn">🤖 AI: ON</button>
-                <button class="btn" id="undo-btn">↩️ Undo</button>
-                <button class="btn" id="flip-btn">🔄 Flip</button>
+                <button class="btn btn-primary" id="reset-btn" aria-label="Start a new chess game">New Game</button>
+                <button class="btn" id="ai-toggle-btn" aria-label="Toggle AI opponent">🤖 AI: ON</button>
+                <button class="btn" id="undo-btn" aria-label="Undo the last two moves">↩️ Undo</button>
+                <button class="btn" id="flip-btn" aria-label="Flip the board 180 degrees">🔄 Flip</button>
             </div>
 
             <div class="settings-row">
                 <label>Difficulty:</label>
                 <select id="difficulty">
-                    <option value="1">Beginner</option>
-                    <option value="2" selected>Intermediate</option>
-                    <option value="3">Advanced</option>
-                    <option value="4">Master</option>
+                    <option value="1">Beginner (Depth 2)</option>
+                    <option value="2" selected>Intermediate (Depth 3)</option>
+                    <option value="3">Advanced (Depth 4)</option>
+                    <option value="4">Master (Depth 4+)</option>
+                    <option value="5">Grandmaster (Depth 5 - SLOW)</option>
                 </select>
             </div>
         </div>
@@ -463,6 +464,25 @@
             bk: '<svg viewBox="0 0 45 45"><g fill="none" fill-rule="evenodd" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g fill="#333" stroke-linecap="butt"><path d="M22.5 11.63V6M20 8h5"/><path d="M22.5 25s4.5-7.5 3-10c-1.5-2.5-6-2.5-6 0-1.5 2.5 3 10 3 10"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-1-1-5-6-6h-18c-5 1-2 5-6 6-3 6 6 10.5 6 10.5v7z"/><path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0"/></g></g></svg>'
         };
 
+        const CHESS_CONFIG = {
+            weights: { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 },
+            pst: {
+                p: [[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]],
+                n: [[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
+                b: [[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
+                r: [[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]],
+                q: [[-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],[0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]],
+                k: [[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]]
+            },
+            depths: { 1: 2, 2: 3, 3: 4, 4: 4, 5: 5 }, // Map UI selector values to actual engine depths
+            animationSpeed: 350,
+            sounds: {
+                move: { freq: 400, ramp: 200, dur: 0.1 },
+                capture: { freq: 200, ramp: 100, dur: 0.1, type: 'square' },
+                check: { freq: 600, ramp: 800, dur: 0.2 }
+            }
+        };
+
         const game = new Chess();
         let aiWorker = null;
         let isFlipped = false;
@@ -470,6 +490,8 @@
         let selectedSquare = null;
         let possibleMoves = [];
         let promotionResolve = null;
+        let viewIndex = -1; // -1 means current position
+        let historyFens = [];
 
         const elements = {
             boardGrid: document.getElementById('board-grid'),
@@ -490,39 +512,23 @@
         // Audio helper
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            const config = CHESS_CONFIG.sounds[type] || CHESS_CONFIG.sounds.move;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
-            if (type === 'move') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'capture') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'check') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.2);
-            }
+            osc.type = config.type || 'sine';
+            osc.frequency.setValueAtTime(config.freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(config.ramp, audioCtx.currentTime + config.dur);
+
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + config.dur);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + config.dur);
         }
 
         function createBoard() {
@@ -532,9 +538,13 @@
                 const col = i % 8;
                 const square = document.createElement('div');
                 const squareName = String.fromCharCode(97 + col) + (8 - row);
+                const isLight = (row + col) % 2 === 0;
 
-                square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                square.className = `square ${isLight ? 'light' : 'dark'}`;
                 square.dataset.square = squareName;
+                square.setAttribute('role', 'gridcell');
+                square.setAttribute('aria-label', `${squareName} ${isLight ? 'light' : 'dark'} square`);
+                square.setAttribute('tabindex', '0');
 
                 // Labels
                 if (col === 0) square.setAttribute('data-coord-rank', 8-row);
@@ -542,6 +552,12 @@
                 if (col === 0 || row === 7) square.setAttribute('data-coord', (col===0?8-row:'') + (row===7?String.fromCharCode(97+col):''));
 
                 square.addEventListener('click', () => onSquareClick(squareName));
+                square.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSquareClick(squareName);
+                    }
+                });
                 elements.boardGrid.appendChild(square);
             }
         }
@@ -550,7 +566,13 @@
         const pieceElements = new Map();
 
         function renderBoard() {
-            const board = game.board();
+            let board;
+            if (viewIndex !== -1 && viewIndex < historyFens.length) {
+                const tempGame = new Chess(historyFens[viewIndex]);
+                board = tempGame.board();
+            } else {
+                board = game.board();
+            }
             const squares = document.querySelectorAll('.square');
             const history = game.history({ verbose: true });
             const lastMove = history.length > 0 ? history[history.length - 1] : null;
@@ -580,7 +602,7 @@
 
             // Selected & Hints
             document.querySelectorAll('.move-hint').forEach(h => h.remove());
-            if (selectedSquare) {
+            if (selectedSquare && viewIndex === -1) {
                 document.querySelector(`[data-square="${selectedSquare}"]`).classList.add('highlight');
                 possibleMoves.forEach(m => {
                     const sq = document.querySelector(`[data-square="${m.to}"]`);
@@ -608,7 +630,7 @@
                 if (!next || next.type !== el.dataset.type || next.color !== el.dataset.color) {
                     el.style.opacity = '0';
                     el.style.transform = 'scale(0.5)';
-                    setTimeout(() => el.remove(), 350);
+                    setTimeout(() => el.remove(), CHESS_CONFIG.animationSpeed);
                     pieceElements.delete(sq);
                 }
             }
@@ -657,28 +679,84 @@
             updateUI();
         }
 
+        function saveGame() {
+            const data = {
+                pgn: game.pgn(),
+                aiEnabled: aiEnabled,
+                isFlipped: isFlipped,
+                difficulty: document.getElementById('difficulty').value
+            };
+            localStorage.setItem('chess_pro_save', JSON.stringify(data));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('chess_pro_save');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.pgn) game.load_pgn(data.pgn);
+                    else if (data.fen) game.load(data.fen);
+                    aiEnabled = data.aiEnabled;
+                    isFlipped = data.isFlipped;
+                    document.getElementById('difficulty').value = data.difficulty;
+
+                    document.getElementById('ai-toggle-btn').innerText = `🤖 AI: ${aiEnabled ? 'ON' : 'OFF'}`;
+                    elements.boardContainer.classList.toggle('flipped', isFlipped);
+
+                    renderBoard();
+                } catch (e) {
+                    console.error("Failed to load saved game", e);
+                }
+            }
+        }
+
+        function jumpToMove(index) {
+            viewIndex = index;
+            renderBoard();
+        }
+
         function updateUI() {
             // Status
-            const turn = game.turn() === 'w' ? 'White' : 'Black';
-            elements.status.innerText = game.game_over() ? 'Game Over' : `${turn}'s Turn`;
-            elements.status.classList.toggle('active-turn', !game.game_over());
-            elements.status.classList.toggle('check', game.in_check());
-            if (game.in_checkmate()) elements.status.innerText = `Checkmate! ${turn === 'White' ? 'Black' : 'White'} wins.`;
-            else if (game.in_draw()) elements.status.innerText = 'Draw!';
-            else if (game.in_check()) elements.status.innerText += ' (Check)';
+            if (viewIndex !== -1) {
+                elements.status.innerText = "Viewing History (Click board to resume)";
+                elements.status.classList.remove('active-turn', 'check');
+            } else {
+                const turn = game.turn() === 'w' ? 'White' : 'Black';
+                elements.status.innerText = game.game_over() ? 'Game Over' : `${turn}'s Turn`;
+                elements.status.classList.toggle('active-turn', !game.game_over());
+                elements.status.classList.toggle('check', game.in_check());
+                if (game.in_checkmate()) elements.status.innerText = `Checkmate! ${turn === 'White' ? 'Black' : 'White'} wins.`;
+                else if (game.in_draw()) elements.status.innerText = 'Draw!';
+                else if (game.in_check()) elements.status.innerText += ' (Check)';
+            }
 
             // History
             const history = game.history();
+
+            // Rebuild history FENs if needed
+            if (history.length + 1 !== historyFens.length) {
+                const tempGame = new Chess();
+                historyFens = [tempGame.fen()];
+                game.history({verbose: true}).forEach(m => {
+                    tempGame.move(m);
+                    historyFens.push(tempGame.fen());
+                });
+            }
+
             let html = '';
             for (let i = 0; i < history.length; i += 2) {
+                const isWhiteActive = (viewIndex === i + 1);
+                const isBlackActive = (viewIndex === i + 2);
+                const isLatest = (viewIndex === -1 && i + 2 >= history.length); // Approximation
+
                 html += `<div class="history-row">
                     <div class="history-num">${Math.floor(i/2) + 1}</div>
-                    <div class="history-move ${i === history.length-1 ? 'active' : ''}">${history[i]}</div>
-                    <div class="history-move ${i+1 === history.length-1 ? 'active' : ''}">${history[i+1] || ''}</div>
+                    <div class="history-move ${isWhiteActive ? 'active' : ''}" onclick="jumpToMove(${i+1})">${history[i]}</div>
+                    <div class="history-move ${isBlackActive ? 'active' : ''}" onclick="jumpToMove(${i+2})">${history[i+1] || ''}</div>
                 </div>`;
             }
             elements.history.innerHTML = html;
-            elements.history.scrollTop = elements.history.scrollHeight;
+            if (viewIndex === -1) elements.history.scrollTop = elements.history.scrollHeight;
 
             // Captured & Material
             const board = game.board();
@@ -703,6 +781,11 @@
         }
 
         async function onSquareClick(square) {
+            if (viewIndex !== -1) {
+                viewIndex = -1;
+                renderBoard();
+                return;
+            }
             if (game.game_over()) return;
 
             const move = possibleMoves.find(m => m.to === square);
@@ -720,6 +803,7 @@
                     selectedSquare = null;
                     possibleMoves = [];
                     renderBoard();
+                    saveGame();
 
                     aiWorker.postMessage({ fen: game.fen(), depth: 1, justEval: true });
 
@@ -757,23 +841,18 @@
         }
 
         function makeAiMove() {
-            const depth = parseInt(document.getElementById('difficulty').value);
-            aiWorker.postMessage({ fen: game.fen(), depth });
+            const uiDepth = parseInt(document.getElementById('difficulty').value);
+            const actualDepth = CHESS_CONFIG.depths[uiDepth] || 3;
+            aiWorker.postMessage({ fen: game.fen(), depth: actualDepth });
         }
 
         function initAiWorker() {
             const workerCode = `
                 ${Chess.toString()}
                 const game = new Chess();
-                const weights = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
-                const pst = {
-                    p: [[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]],
-                    n: [[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
-                    b: [[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
-                    r: [[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]],
-                    q: [[-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],[0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]],
-                    k: [[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]]
-                };
+                const CONFIG = ${JSON.stringify(CHESS_CONFIG)};
+                const weights = CONFIG.weights;
+                const pst = CONFIG.pst;
 
                 function evaluate(fen) {
                     game.load(fen);
@@ -842,6 +921,7 @@
                     playSound(move.captured ? 'capture' : 'move');
                     if (game.in_check()) playSound('check');
                     renderBoard();
+                    saveGame();
                     updateEval(e.data.evaluation);
                 }
             };
@@ -853,18 +933,37 @@
             let p = 50 + (score / 10);
             p = Math.max(5, Math.min(95, p));
             elements.evalProgress.style.height = `${p}%`;
+
+            const evalBar = document.getElementById('eval-bar');
+            if (evalBar) {
+                evalBar.setAttribute('aria-valuenow', s);
+            }
         }
 
-        document.getElementById('reset-btn').onclick = () => { game.reset(); renderBoard(); };
-        document.getElementById('undo-btn').onclick = () => { game.undo(); game.undo(); renderBoard(); };
-        document.getElementById('flip-btn').onclick = () => { isFlipped = !isFlipped; elements.boardContainer.classList.toggle('flipped', isFlipped); };
+        document.getElementById('reset-btn').onclick = () => { game.reset(); renderBoard(); saveGame(); };
+        document.getElementById('undo-btn').onclick = () => { game.undo(); game.undo(); renderBoard(); saveGame(); };
+        document.getElementById('flip-btn').onclick = () => { isFlipped = !isFlipped; elements.boardContainer.classList.toggle('flipped', isFlipped); saveGame(); };
         document.getElementById('ai-toggle-btn').onclick = () => {
             aiEnabled = !aiEnabled;
             document.getElementById('ai-toggle-btn').innerText = `🤖 AI: ${aiEnabled ? 'ON' : 'OFF'}`;
+            saveGame();
         };
+        document.getElementById('difficulty').onchange = () => { saveGame(); };
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', e => {
+            if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'u') document.getElementById('undo-btn').click();
+            if (key === 'f') document.getElementById('flip-btn').click();
+            if (key === 'n') document.getElementById('reset-btn').click();
+            if (key === 'a') document.getElementById('ai-toggle-btn').click();
+        });
 
         initAiWorker();
         createBoard();
+        loadGame();
         renderBoard();
     </script>
 </body>
